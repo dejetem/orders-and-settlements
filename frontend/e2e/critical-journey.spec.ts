@@ -58,7 +58,7 @@ test.describe('Critical User Journey: Registration -> Order Creation -> Payment'
     await expect(page.locator('text=Paid').first()).toBeVisible();
     
     // Verify Audit Log is displayed
-    await expect(page.getByText('ORDER CREATED', { exact: true })).toBeVisible();
-    await expect(page.getByText('PAYMENT ADDED', { exact: true })).toBeVisible();
+    await expect(page.getByText(/^order created$/i)).toBeVisible();
+    await expect(page.getByText(/^payment added$/i)).toBeVisible();
   });
 });

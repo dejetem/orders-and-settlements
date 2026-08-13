@@ -15,16 +15,16 @@ test.describe('Critical User Journey: Registration -> Order Creation -> Payment'
     
     // Wait for navigation after registration
     await Promise.all([
-      page.waitForURL('**/orders'),
+      page.waitForURL('http://localhost:3000/'),
       page.click('button[type="submit"]')
     ]);
 
-    await expect(page).toHaveURL(/.*\/orders/);
+    await expect(page).toHaveURL('http://localhost:3000/');
 
     // 2. Go to New Order
     await Promise.all([
       page.waitForURL('**/orders/new'),
-      page.click('text="New Order"')
+      page.click('text="Create Order"')
     ]);
 
     // 3. Create an Order
@@ -32,9 +32,9 @@ test.describe('Critical User Journey: Registration -> Order Creation -> Payment'
     await page.fill('input[name="dueDate"]', '2026-12-31');
     
     // Line item 1
-    await page.fill('input[name="lineItems.0.description"]', 'Widget A');
-    await page.fill('input[name="lineItems.0.quantity"]', '10');
-    await page.fill('input[name="lineItems.0.unitPrice"]', '500'); // 5.00
+    await page.fill('input[placeholder="Item name"]', 'Widget A');
+    await page.locator('div').filter({ hasText: /^Quantity$/ }).locator('input').fill('10');
+    await page.locator('div').filter({ hasText: /^Price \(\$\)$/ }).locator('input').fill('500'); // 5.00
 
     await Promise.all([
       page.waitForURL('**/orders/*'),
@@ -49,16 +49,16 @@ test.describe('Critical User Journey: Registration -> Order Creation -> Payment'
 
     // 4. Add Payment
     await page.fill('input[name="amount"]', '5000'); // Full payment (10 * 500)
-    await page.fill('input[name="note"]', 'Paid in full');
+    await page.fill('textarea[name="note"]', 'Paid in full');
 
-    await page.click('button:has-text("Add Payment")');
+    await page.click('button:has-text("Submit Payment")');
 
     // Verify status changed to Paid
     // Depending on UI updates, we might need to wait for the status to change
     await expect(page.locator('text=Paid').first()).toBeVisible();
     
     // Verify Audit Log is displayed
-    await expect(page.locator('text=Order Created')).toBeVisible();
-    await expect(page.locator('text=PAYMENT_ADDED')).toBeVisible();
+    await expect(page.locator('text=ORDER CREATED')).toBeVisible();
+    await expect(page.locator('text=PAYMENT ADDED')).toBeVisible();
   });
 });

@@ -10,6 +10,15 @@ import toast from "react-hot-toast";
 import { ArrowLeft, CreditCard, Clock, CheckCircle, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { v4 as uuidv4 } from "uuid";
+import { useCallback } from "react";
+
+interface AuditLog {
+  _id?: string;
+  id?: string;
+  action: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
 
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
@@ -37,7 +46,7 @@ export default function OrderDetails() {
   const { id } = useParams();
   const [order, setOrder] = useState<Order | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [auditLogPage, setAuditLogPage] = useState(1);
   const [auditLogTotalPages, setAuditLogTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,24 +55,24 @@ export default function OrderDetails() {
   const [paymentNote, setPaymentNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
   const router = useRouter();
 
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async (showLoading = false) => {
     try {
-      setIsLoading(true);
+      if (showLoading) setIsLoading(true);
       const { data } = await api.get(`/orders/${id}`);
       setOrder(data.data.order);
       setPayments(data.data.payments);
-
-    } catch (error) {
+    } catch {
       toast.error("Failed to load order details");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = useCallback(async () => {
     if (!id) return;
     try {
       const auditRes = await api.get(`/orders/${id}/audit-logs?page=${auditLogPage}&limit=5`);
@@ -72,15 +81,19 @@ export default function OrderDetails() {
     } catch (err) {
       console.error("Failed to fetch audit logs", err);
     }
-  };
-
-  useEffect(() => {
-    if (id) fetchOrder();
-  }, [id]);
-
-  useEffect(() => {
-    fetchAuditLogs();
   }, [id, auditLogPage]);
+
+  useEffect(() => {
+    if (id) {
+      // eslint-disable-next-line
+      fetchOrder(false);
+    }
+  }, [id, fetchOrder]);
+
+  useEffect(() => {
+    // eslint-disable-next-line
+    fetchAuditLogs();
+  }, [fetchAuditLogs]);
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,24 +124,33 @@ export default function OrderDetails() {
       fetchOrder();
       setAuditLogPage(1);
       fetchAuditLogs();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to record payment");
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } };
+        toast.error(err.response?.data?.message || "Failed to record payment");
+      } else {
+        toast.error("Failed to record payment");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) return;
-
     try {
       setIsDeleting(true);
       await api.delete(`/orders/${id}`);
       toast.success("Order deleted successfully!");
       router.push("/");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete order");
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } };
+        toast.error(err.response?.data?.message || "Failed to delete order");
+      } else {
+        toast.error("Failed to delete order");
+      }
       setIsDeleting(false);
+      setIsDeleteModalOpen(false);
     }
   };
 
@@ -154,6 +176,56 @@ export default function OrderDetails() {
 
   return (
     <AppLayout>
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="relative z-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          {/* Background backdrop */}
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true" onClick={() => setIsDeleteModalOpen(false)}></div>
+
+          <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+            <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0 pointer-events-none">
+              
+              {/* Modal panel */}
+              <div className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 pointer-events-auto">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <Trash2 className="h-6 w-6 text-rose-600" aria-hidden="true" />
+                  </div>
+                  <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                    <h3 className="text-base font-semibold leading-6 text-slate-900" id="modal-title">
+                      Delete Order
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-slate-500">
+                        Are you sure you want to delete this order? This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="button"
+                    disabled={isDeleting}
+                    className="inline-flex w-full justify-center rounded-md bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-500 sm:ml-3 sm:w-auto disabled:opacity-50"
+                    onClick={handleDelete}
+                  >
+                    {isDeleting ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isDeleting}
+                    className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 sm:mt-0 sm:w-auto disabled:opacity-50"
+                    onClick={() => setIsDeleteModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-8">
         <Link href="/" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors mb-4">
           <ArrowLeft className="w-4 h-4 mr-1" />
@@ -180,13 +252,13 @@ export default function OrderDetails() {
             Edit Order
           </Link>
           <button
-            onClick={handleDelete}
+            onClick={() => setIsDeleteModalOpen(true)}
             disabled={isDeleting || order.amountPaid > 0}
             title={order.amountPaid > 0 ? "Cannot delete an order with payments" : "Delete Order"}
             className="inline-flex items-center px-4 py-2 border border-rose-300 shadow-sm text-sm font-medium rounded-lg text-rose-700 bg-white hover:bg-rose-50 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2 className="w-4 h-4 mr-2 text-rose-500" />
-            {isDeleting ? "Deleting..." : "Delete Order"}
+            Delete Order
           </button>
         </div>
       </div>
@@ -250,7 +322,7 @@ export default function OrderDetails() {
                         </p>
                         {payment.note && (
                           <p className="text-sm text-slate-600 mt-2 bg-slate-50 p-2 rounded border border-slate-100">
-                            "{payment.note}"
+                            &quot;{payment.note}&quot;
                           </p>
                         )}
                       </div>
@@ -272,8 +344,8 @@ export default function OrderDetails() {
               </div>
             ) : (
               <ul className="divide-y divide-slate-100">
-                {auditLogs.map((log) => (
-                  <li key={log._id || log.id || Math.random()} className="p-6 flex items-start">
+                {auditLogs.map((log, index) => (
+                  <li key={log._id || log.id || index} className="p-6 flex items-start">
                     <div className="flex-shrink-0 mt-0.5">
                       <div className="h-2 w-2 rounded-full bg-indigo-500 mt-2"></div>
                     </div>

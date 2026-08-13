@@ -40,7 +40,7 @@ export default function EditOrder() {
             unitPrice: item.unitPrice / 100 // convert back to dollars for form
           }))
         );
-      } catch (error) {
+      } catch {
         toast.error("Failed to load order details");
         router.push(`/orders/${id}`);
       } finally {
@@ -94,8 +94,13 @@ export default function EditOrder() {
       });
       toast.success("Order updated successfully!");
       router.push(`/orders/${id}`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update order");
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } };
+        toast.error(err.response?.data?.message || "Failed to update order");
+      } else {
+        toast.error("Failed to update order");
+      }
     } finally {
       setIsSubmitting(false);
     }

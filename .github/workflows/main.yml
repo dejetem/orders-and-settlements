@@ -53,7 +53,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd backend && npm ci
-        cd frontend && npm ci
+        cd ../frontend && npm ci
     - name: Install Playwright Browsers
       run: |
         cd frontend

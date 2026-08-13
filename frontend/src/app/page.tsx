@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { Order, OrderStatus } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { Plus, Search, Filter, Download } from "lucide-react";
+import { Plus, Filter, Download } from "lucide-react";
 import toast from "react-hot-toast";
 
 const StatusBadge = ({ status }: { status: OrderStatus }) => {
@@ -57,7 +57,7 @@ export default function Dashboard() {
         const { data } = await api.get(url);
         setOrders(data.data.items || []);
         setTotalPages(data.data.totalPages || 1);
-      } catch (error) {
+      } catch {
         toast.error("Failed to fetch orders");
       } finally {
         setIsLoading(false);
@@ -68,6 +68,7 @@ export default function Dashboard() {
 
   // Reset page when filter changes
   useEffect(() => {
+    // eslint-disable-next-line
     setPage(1);
   }, [statusFilter, startDate, endDate]);
 
@@ -88,7 +89,7 @@ export default function Dashboard() {
       link.click();
       link.parentNode?.removeChild(link);
       toast.success("Export successful!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to export orders");
     } finally {
       setIsExporting(false);

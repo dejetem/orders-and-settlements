@@ -66,8 +66,13 @@ export default function CreateOrder() {
       });
       toast.success("Order created successfully!");
       router.push(`/orders/${data.data.id}`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to create order");
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } };
+        toast.error(err.response?.data?.message || "Failed to create order");
+      } else {
+        toast.error("Failed to create order");
+      }
     } finally {
       setIsSubmitting(false);
     }

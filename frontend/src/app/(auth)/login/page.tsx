@@ -22,8 +22,13 @@ export default function LoginPage() {
       await api.post("/auth/login", { email, password });
       toast.success("Welcome back!");
       router.push("/");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Login failed");
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } };
+        toast.error(err.response?.data?.message || "Login failed");
+      } else {
+        toast.error("Login failed");
+      }
     } finally {
       setIsLoading(false);
     }

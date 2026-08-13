@@ -13,6 +13,7 @@ api.interceptors.response.use(
   (error) => {
     // We could handle global 401s here to redirect to login
     if (error.response?.status === 401 && typeof window !== 'undefined') {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = '/login';
     }
     return Promise.reject(error);

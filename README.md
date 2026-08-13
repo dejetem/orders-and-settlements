@@ -21,7 +21,7 @@ This repository is split into a cleanly separated **Frontend** (Next.js) and **B
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/dejetem/orders-and-settlements
    cd orders-and-settlements
    ```
 
@@ -125,3 +125,9 @@ Handling concurrent payments is a critical requirement in financial systems.
 2. **Immutability:** I chose to allow payments to simply append to the order's `amountPaid` and automatically recalculate status, leaving the original order's line items editable in theory. In a strict financial system, once a payment is made, the order invoice should become completely immutable (read-only) for auditability.
 
 ---
+
+## Deployed live urls
+
+1. **Frontend:** https://orders-and-settlements-fe.onrender.com/
+2. **Backend:** https://orders-and-settlements-be.onrender.com/
+

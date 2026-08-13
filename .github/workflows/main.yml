@@ -66,3 +66,24 @@ jobs:
         cd frontend && npm run dev &
         npx wait-on tcp:5000 tcp:3000
         cd frontend && npx playwright test
+
+  deploy:
+    needs: [backend-test, frontend-build, e2e-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Deploy to Render
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}" ]; then
+            echo "Deploying Backend..."
+            curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}"
+          else
+            echo "No RENDER_DEPLOY_HOOK_BACKEND secret found. Skipping backend deployment."
+          fi
+          
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}" ]; then
+            echo "Deploying Frontend..."
+            curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}"
+          else
+            echo "No RENDER_DEPLOY_HOOK_FRONTEND secret found. Skipping frontend deployment."
+          fi
